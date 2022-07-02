@@ -19,20 +19,55 @@ const client = new MongoClient(uri, {
 async function run() {
     try {
         await client.connect();
-        const todoCollection = client.db("todo").collection("todos");
+        const todoCollection = client.db("taskManagement").collection("todos");
 
         app.get("/todos", async (req, res) => {
-            const query = {};
-            const cursor = await todoCollection.find(query);
+            const cursor = todoCollection.find({});
             const todos = await cursor.toArray();
-            res.send(todos);
+            res.json(todos);
         });
 
         app.post("/todos", async (req, res) => {
             const todo = req.body;
-            const result = await todoCollection.insertOne(todo);
-            res.send(result.ops[0]);
+            await todoCollection.insertOne(todo);
+            res.json(todo);
         });
+
+        app.delete("/todos/:id", async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const result = await todoCollection.deleteOne(query);
+            res.json(result);
+        });
+
+        app.put("/todos/:id", async (req, res) => {
+            const id = req.params.id;
+            const todo = req.body;
+            const query = { _id: ObjectId(id) };
+            const result = await todoCollection.replaceOne(query, todo);
+            res.json(result);
+        });
+
+        app.put("/todos/status/:id", async (req, res) => {
+            const id = req.params.id;
+
+            const query = { _id: ObjectId(id) };
+            const options = { upsert: true };
+            const updatedStatus = { $set: { status: "Completed" } };
+            const result = await todoCollection.updateOne(
+                query,
+                updatedStatus,
+                options
+            );
+            res.json(result);
+        });
+        // app.get("/todos/:status", async (req, res) => {
+        //     const status = req.params.status;
+        //     const cursor = todoCollection.find({ status: "completed" });
+        //     const todos = await cursor.toArray();
+        //     res.json(todos);
+        //     console.log(todos);
+        // });
     } finally {
         // await client.close();
     }
